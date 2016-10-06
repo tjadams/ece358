@@ -1,3 +1,5 @@
+package lab1;
+
 import java.util.Scanner;
 
 public class simulator {
@@ -19,15 +21,15 @@ public class simulator {
 
         System.out.println("Would you like to simulate using a M/D/1 queue (y) or a M/D/1/K queue (n)? (y/n)");
         String MDOneChoice = scanner.next();
-        while (!(MDOneChoice.equals('y') || MDOneChoice.equals('n'))) {
+        while (!(MDOneChoice.equals("y") || MDOneChoice.equals("n"))) {
             System.out.println("Please enter 'y' for M/D/1 or 'n' for M/D/1/K: ");
             MDOneChoice = scanner.next();
         }
 
         boolean isMDOne = false;
-        if (MDOneChoice.equals('y')) {
+        if (MDOneChoice.equals("y")) {
             isMDOne = true;
-        } else if (MDOneChoice.equals('n')) {
+        } else if (MDOneChoice.equals("n")) {
             isMDOne = false;
         }
 
