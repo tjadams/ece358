@@ -1,0 +1,10 @@
+# Java
+*.class
+*.out
+out/
+
+# IntelliJ IDEA
+*.iml
+
+## Directory-based project format:
+.idea/
