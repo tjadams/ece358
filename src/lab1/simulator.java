@@ -55,6 +55,8 @@ public class simulator {
 
     public static void simulateMDOne(int lambda, int L, int C) {
         // TODO ...
+        MDOneQueue my_MDOneQueue = new MDOneQueue(lambda, L, C);
+        float interPacketArrivalTimeX; // TODO create this exponential random variable and follow the "providedLab1Pseudocode.txt" file
 
         // Display outputs of MDOne
         int E_N;
