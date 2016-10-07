@@ -4,19 +4,22 @@ import java.util.Scanner;
 
 // Note that this class is a singleton so we'll use global variables
 public class simulator {
-    // TODO should we care about floating point values?
-    static long t_arrival; // the arrival time of a packet (ms)
-    static long t_departure; // the ddeparture time of a packet (ms)
-    static long t; // elapsed time of simulation aka t in the pseudocode (ms)
-    static long t_start; // start time of simulation, reference point in t (ms)
-    static int lambda; // packets per second
-    static int L; // length of packet in bits
-    static int C; // transmission rate in bits per second
-    static int num_of_ticks;
-    static int ms_per_second = 1000; // how many milliseconds are in one second
-    static Scanner scanner;
+    static int C;                           // transmission rate in bits per second
     static boolean is_m_d_one;
-    static KendallQueue queue; // TODO create this class, a superclass of MD1 and MD1K queues
+    static int lambda;                      // packets per second
+    static int L;                           // length of packet in bits
+    static int num_of_ticks;
+    // TODO should we care about floating point values?
+    static long t;                          // elapsed time of simulation aka t in the pseudocode (ms)
+    static long t_arrival;                  // the arrival time of a packet (ms)
+    static long t_departure;                // the departure time of a packet (ms)
+    static long t_start;                    // start time of simulation, reference point in t (ms)
+
+    static final int ms_per_second = 1000;  // how many milliseconds are in one second
+
+    // TODO create this class, a superclass of MD1 and MD1K queues
+    static KendallQueue queue;
+    static Scanner scanner;
 
     public static void main(String args[]) {
         initialize_variables();
@@ -35,7 +38,7 @@ public class simulator {
             KendallPacket packet = new KendallPacket(L);
             queue.add(packet);
             t_arrival = t + calc_arrival_time();
-            t_departure = t + (L/C)*ms_per_second;// bits/(bits/second)*1000(ms/second) = ms
+            t_departure = t + (L / C) * ms_per_second;  // bits/(bits/second)*1000(ms/second) = ms
             // TODO add support for the packet loss case of MD1K where you can't add to the queue. Maybe do something like have queue.add() return a boolean representing success. If it's false then increase number of packets lost by 1. This would only be false in the situation that you have a MD1K queue and that queue is full and you try to add a packet to it
         }
     }
@@ -51,23 +54,25 @@ public class simulator {
         double u = Math.random(); // random number between 0 and 1
         double arrival_time_in_seconds = ((-1 / lambda) * Math.log(1 - u)); // exponential random variable
         double arrival_time_in_milliseconds = arrival_time_in_seconds * ms_per_second;
-        return (long)arrival_time_in_milliseconds;
+        return (long) arrival_time_in_milliseconds;
     }
 
     public static void pick_a_queue() {
         System.out.println("Would you like to simulate using a M/D/1 queue (y) or a M/D/1/K queue (n)? (y/n)");
         String m_d_one_choice = scanner.next();
-        while (!(m_d_one_choice.equals("y") || m_d_one_choice.equals("n"))) {
+        final String YES = "y";
+        final String NO = "n";
+        while (!(m_d_one_choice.equals(YES) || m_d_one_choice.equals(NO))) {
             System.out.println("Please enter 'y' for M/D/1 or 'n' for M/D/1/K: ");
             m_d_one_choice = scanner.next();
         }
 
-        if (m_d_one_choice.equals("y")) {
+        if (m_d_one_choice.equals(YES)) {
             is_m_d_one = true;
             scanner.close();
             System.out.println("M/D/1 queue selected.");
             // TODO set queue equal to a new md1 queue
-        } else if (m_d_one_choice.equals("n")) {
+        } else if (m_d_one_choice.equals(NO)) {
             is_m_d_one = false;
             System.out.println("M/D/1/K queue selected.");
 
