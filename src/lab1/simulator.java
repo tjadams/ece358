@@ -25,7 +25,7 @@ public class simulator {
         initialize_variables();
         t_arrival = calc_arrival_time(); // calculate first packet arrival time
         // TODO appendix B says to repeat this for loop like 5 times or something...
-        for (int i = 0; i <= num_of_ticks; i++) {
+        for (int i = 1; i <= num_of_ticks; i++) {
             arrival();
             departure();
         }
