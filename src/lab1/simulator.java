@@ -30,7 +30,7 @@ public class simulator {
     }
 
     public static void arrival() {
-        t = System.currentTimeMillis() - t_start;
+        t = now() - t_start;
         if (t >= t_arrival) {
             KendallPacket packet = new KendallPacket(L);
             queue.add(packet);
@@ -41,7 +41,7 @@ public class simulator {
     }
 
     public static void departure() {
-        t = System.currentTimeMillis() - t_start;
+        t = now() - t_start;
         if (t >= t_departure) {
             queue.pop();
         }
@@ -100,7 +100,7 @@ public class simulator {
 
         pick_a_queue();
 
-        t_start = System.currentTimeMillis();
+        t_start = now();
     }
 
     public static void create_report() {
@@ -116,5 +116,10 @@ public class simulator {
             int P_IDLE;
             int P_LOSS;
         }
+    }
+
+    public static long now() {
+        // TODO: Once we finish, let's see if `System.nanoTime()` makes any significant difference.
+        return System.currentTimeMillis();
     }
 }
