@@ -26,8 +26,8 @@ public class simulator {
     // Duration of a single tick (sec)
     static double tick_duration;
 
-    // TODO create this class, a superclass of MD1 and MD1K queues
-    static KendallQueue queue;
+    static MD1Queue md1Queue;
+    static MD1KQueue md1KQueue;
     static Scanner scanner;
 
     public static void main(String args[]) {
@@ -89,17 +89,25 @@ public class simulator {
         if (t >= t_arrival) {
             KendallPacket new_packet = new KendallPacket(packet_size);
 
-            queue.add(new_packet);
+            if (is_MD1) {
+                md1Queue.add(new_packet);
+            } else {
+                // TODO add support for the packet loss case of MD1K where you can't add to the queue. Maybe do something like have queue.add() return a boolean representing success. If it's false then increase number of packets lost by 1. This would only be false in the situation that you have a MD1K queue and that queue is full and you try to add a packet to it
+                md1KQueue.add(new_packet);
+            }
 
             t_arrival = t + calc_arrival_time();
             t_departure = t + t_transmission;
-            // TODO add support for the packet loss case of MD1K where you can't add to the queue. Maybe do something like have queue.add() return a boolean representing success. If it's false then increase number of packets lost by 1. This would only be false in the situation that you have a MD1K queue and that queue is full and you try to add a packet to it
         }
     }
 
     public static void departure() {
         if (t >= t_departure) {
-            queue.pop();
+            if (is_MD1) {
+                md1Queue.remove();
+            } else {
+                md1KQueue.remove();
+            }
         }
     }
 
@@ -127,7 +135,8 @@ public class simulator {
         if (choice.equals(MD1)) {
             is_MD1 = true;
             System.out.println("M/D/1 queue selected.");
-            // TODO set queue equal to a new md1 queue
+
+            md1Queue = new MD1Queue();
         } else {
             is_MD1 = false;
             System.out.println("M/D/1/K queue selected.");
@@ -135,7 +144,7 @@ public class simulator {
             System.out.println("Please enter an integer value for K, the buffer size of the queue: ");
             int K = scanner.nextInt();
 
-            // TODO set queue equal to a new md1k queue
+            md1KQueue = new MD1KQueue(K);
         }
 
         scanner.close();
