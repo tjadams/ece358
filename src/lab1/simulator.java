@@ -7,11 +7,11 @@ public class simulator {
     static boolean is_MD1;
     // Total number of ticks for the simulation (ticks)
     static int num_of_ticks;
-    // Average number of packets generated/arrived (packets/sec)
+    // Average number of packets generated/arrived (packets/sec). This is lambda in the lab notes
     static int packet_gen_rate;
     // Packet size (bits)
     static int packet_size;
-    // Utilization of the queue (packets)
+    // Utilization of the queue (packets). This is p in the lab notes
     static int q_utilizaton;
     // Duration of the simulation (sec)
     static double simul_duration;

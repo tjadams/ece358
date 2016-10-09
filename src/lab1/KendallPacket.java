@@ -9,7 +9,7 @@ public class KendallPacket {
         this.length = length;
     }
 
-    public void setTimeGenerated(long time) {
-        t_generate = time;
+    public void setTickGenerated(int tick) {
+        t_generate = tick;
     }
 }
