@@ -14,6 +14,8 @@ public class MD1Queue {
         q.add(packet);
     }
 
+    public int getSize() { return q.size(); }
+
     public void remove() {
         q.remove();
     }

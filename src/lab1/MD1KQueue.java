@@ -12,11 +12,17 @@ public class MD1KQueue {
         this.K = K;
     }
 
-    public void add(KendallPacket packet) {
-        if (q.size() <= K) {
+    // Returns a boolean representing success or failure for adding an item to the queue
+    public boolean add(KendallPacket packet) {
+        if (q.size() < K) {
             q.add(packet);
+            return true;
+        } else {
+            return false;
         }
     }
+
+    public int getSize() { return q.size(); }
 
     public void remove() {
         q.remove();
