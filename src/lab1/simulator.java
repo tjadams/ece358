@@ -9,12 +9,11 @@ public class simulator {
     static boolean is_MD1;
     // Total number of ticks for the simulation (ticks)
     static int num_of_ticks;
-    // Average number of packets generated/arrived (packets/sec). This is lambda in the lab notes
-    static int packet_gen_rate;
+    // Average number of packets generated/arrived (packet gen rate in packets/sec). This is lambda in the lab notes
+    static double lambda;
     // Packet size (bits)
-    static int packet_size;
-    // Utilization of the queue (packets). This is p in the lab notes
-    static int q_utilizaton;
+    static int L;
+    static int C;
     // Duration of the simulation (sec)
     static double simul_duration;
     // Current tick (ticks)
@@ -47,11 +46,17 @@ public class simulator {
     // become a boolean that checks if the simulator is idle
     static boolean is_mostly_idle;
 
+    // Represents the rho inequalities as in question 2 and for from the report
+    static double p_step_size;
+    static double p_start;
+    static double p_end;
+    static int p_num_steps;
+
     // Outputs (array size is M)
-    static int E_N[]; // avg # of packets in the queue (# packets)
-    static int E_T[]; // (ms)
-    static int P_LOSS[]; // (%)
-    static int P_IDLE[]; // (%)
+    static double E_N[][]; // avg # of packets in the queue (# packets)
+    static int E_T[][]; // (ms)
+    static double P_LOSS[][]; // (%)
+    static double P_IDLE[][]; // (%)
 
     static MD1Queue md1Queue;
     static MD1KQueue md1KQueue;
@@ -61,34 +66,44 @@ public class simulator {
         initialize_variables();
 
         t_arrival = calc_arrival_time(); // calculate first packet arrival time
-        // TODO wrap these 2 for loops and create_report() in another for loop for p. Think about if i need to reset variables and ticks for p etc
-        for (int j = 0; j < M; j++) {
-            for (int i = 1; i <= num_of_ticks; i++) {
-                // E_N intermediate calculations
-                t_queue_check_ctr++;
-                is_mostly_idle = true;
+        // TODO Think about if i need to reset variables and ticks for p etc
+        int p_index = 0;
+        double p_value = p_start;
+        while (p_index < p_num_steps) {
+            lambda = p_value*C/L;
+            p_value += p_step_size;
+            for (int j = 0; j < M; j++) {
+                for (int i = 1; i <= num_of_ticks; i++) {
+                    // intermediate calculations for outputs
+                    t_queue_check_ctr++;
+                    is_mostly_idle = true;
 
-                arrival();
-                departure();
+                    // simulate
+                    arrival();
+                    departure();
 
-                boolean is_idle = is_mostly_idle && md1KQueue.getSize() == 0 && md1Queue.getSize() == 0;
-                if (is_idle) {
-                    t_idle++;
+                    // more intermediate calculations for outputs
+                    boolean is_idle = is_mostly_idle && md1KQueue.getSize() == 0 && md1Queue.getSize() == 0;
+                    if (is_idle) {
+                        t_idle++;
+                    }
+
+                    if (t_queue_check_ctr % t_queue_check == 0) {
+                        t_queue_check_ctr = 0;
+                        queue_size_list.add(queue_size);
+                    }
                 }
 
-                if (t_queue_check_ctr % t_queue_check == 0) {
-                    t_queue_check_ctr = 0;
-                    queue_size_list.add(queue_size);
+                calculate_E_N(j, p_index);
+                calculate_E_T(j, p_index);
+                calculate_P_IDLE(j, p_index);
+                if (!is_MD1) {
+                    calculate_P_LOSS(j, p_index);
                 }
             }
-            calculate_E_N(j);
-            calculate_E_T(j);
-            calculate_P_IDLE(j);
-            if (!is_MD1) {
-                calculate_P_LOSS(j);
-            }
+            create_report(p_index);
+            p_index++;
         }
-        create_report();
     }
 
     public static void initialize_variables() {
@@ -97,10 +112,7 @@ public class simulator {
 
         M = 5;
 
-        E_N = new int [M];
-        E_T = new int [M];
-        P_IDLE = new int [M];
-        P_LOSS = new int [M];
+        p_step_size = 0.1;
 
         // Check every 5 ticks
         t_queue_check = 5;
@@ -119,12 +131,12 @@ public class simulator {
         // Receive ms, store in seconds.
         System.out.println("Duration for each tick (in ms) <= 1 ms: ");
         // (sec) = (ms) / (1000 ms / sec)
-        tick_duration = (double) scanner.nextInt() / MS_PER_SEC;
+        tick_duration = scanner.nextDouble() / MS_PER_SEC;
 
         // Receive minutes, store in seconds.
         System.out.println("Simulation time (in minutes): ");
         // (min) = (min) * (60 sec / min)
-        simul_duration = (double) scanner.nextInt() * SEC_PER_MIN;
+        simul_duration = scanner.nextDouble() * SEC_PER_MIN;
 
         // (ticks) = (sec) / (sec / tick)
         num_of_ticks = (int) Math.ceil(simul_duration / tick_duration);
@@ -133,20 +145,18 @@ public class simulator {
         System.out.println(
             "\u03BB, Average number of packets generated/arrived  (packets/sec): "
         );
-        packet_gen_rate = scanner.nextInt();
+        lambda = scanner.nextInt();
 
         System.out.println("L, Length of a packet (bits): ");
-        packet_size = scanner.nextInt();
+        L = scanner.nextInt();
 
         System.out.println("C, Transmission rate (bits/sec): ");
-        final int transmission_rate = scanner.nextInt();
+        C = scanner.nextInt();
 
         // (ticks) = ((bits) / (bits / sec)) / (sec / tick)
         t_transmission = (int) Math.ceil(
-            (packet_size / transmission_rate) / tick_duration
+            (L / C) / tick_duration
         );
-
-        q_utilizaton = packet_size * (packet_gen_rate / transmission_rate);
 
         pick_a_queue();
     }
@@ -154,7 +164,7 @@ public class simulator {
     public static void arrival() {
         if (t >= t_arrival) {
             is_mostly_idle = false;
-            KendallPacket new_packet = new KendallPacket(packet_size);
+            KendallPacket new_packet = new KendallPacket(L);
             // TODO confirm that this is the correct tick or if it should be t_arrival
             new_packet.setT_generate(t);
 
@@ -194,7 +204,7 @@ public class simulator {
     public static int calc_arrival_time() {
         double u = Math.random(); // random number between 0 and 1
         double arrival_time =
-            ((-1 / packet_gen_rate) * Math.log(1 - u)) / tick_duration;
+            ((-1 / lambda) * Math.log(1 - u)) / tick_duration;
 
         return (int) Math.ceil(arrival_time);
     }
@@ -217,6 +227,9 @@ public class simulator {
             System.out.println("M/D/1 queue selected.");
 
             md1Queue = new MD1Queue();
+            p_num_steps = 8; // 0.9, 8, 7, 6, 5, 4, 3, 2 = 8 total
+            p_start =  0.2;
+            p_end = 0.9;
         } else {
             is_MD1 = false;
             System.out.println("M/D/1/K queue selected.");
@@ -225,58 +238,66 @@ public class simulator {
             int K = scanner.nextInt();
 
             md1KQueue = new MD1KQueue(K);
+            p_num_steps = 11; // 1.5, 1.4, 1.3, 1.2, 1.1, 1.0, 0.9, 0.8, 0.7, 0.6, 0.5 = 11 total
+            p_start = 0.5;
+            p_end = 1.5;
+            P_LOSS = new double [p_num_steps][M];
         }
+
+        E_N = new double [p_num_steps][M];
+        E_T = new int [p_num_steps][M];
+        P_IDLE = new double [p_num_steps][M];
 
         scanner.close();
     }
 
     // Display outputs
-    public static void create_report() {
+    public static void create_report(int p_index) {
         for (int i = 0; i < M; i++) {
-            System.out.println("E{N] for M-1= " + i + " is: " + E_N[i]);
-            System.out.println("E{T] for M-1 = " + i + " is: " + E_T[i]);
-            System.out.println("P_IDLE for M-1 = " + i + " is: " + P_IDLE[i]);
+            System.out.println("E{N] for M-1= " + i + " is: " + E_N[p_index][i]);
+            System.out.println("E{T] for M-1 = " + i + " is: " + E_T[p_index][i]);
+            System.out.println("P_IDLE for M-1 = " + i + " is: " + P_IDLE[p_index][i]);
             if (!is_MD1) {
-                System.out.println("P_LOSS for M-1 = " + i + " is: " + P_LOSS[i]);
+                System.out.println("P_LOSS for M-1 = " + i + " is: " + P_LOSS[p_index][i]);
             }
         }
     }
 
-    public static void calculate_E_N(int j) {
+    public static void calculate_E_N(int M_index, int p_index) {
         int sum = 0;
         for (int i = 0; i < queue_size_list.size(); i++) {
             sum = sum + queue_size_list.get(i);
         }
 
-        E_N[j] = sum/queue_size_list.size();
+        E_N[p_index][M_index] = sum/queue_size_list.size();
 
         // Reset variables that will be used in future intermediate calculations
         queue_size_list.clear();
     }
 
-    public static void calculate_P_LOSS(int j) {
-        P_LOSS[j] = packets_lost/packets_generated;
+    public static void calculate_P_LOSS(int M_index, int p_index) {
+        P_LOSS[p_index][M_index] = packets_lost/packets_generated;
 
         // Reset variables that will be used in future intermediate calculations
         packets_lost = 0;
         packets_generated = 0;
     }
 
-    public static void calculate_E_T(int j) {
+    public static void calculate_E_T(int M_index, int p_index) {
         double average_sojourn_time = 0;
 
         for(int i = 0; i < sojourn_list.size(); i++) {
             average_sojourn_time = average_sojourn_time + sojourn_list.get(i)*tick_duration;
         }
 
-        E_T[j] = (int)(average_sojourn_time/sojourn_list.size());
+        E_T[p_index][M_index] = (int)(average_sojourn_time/sojourn_list.size());
 
         // Reset variables that will be used in future intermediate calculations
         sojourn_list.clear();
     }
 
-    public static void calculate_P_IDLE(int j) {
-        P_IDLE[j] = (int)((t_idle*tick_duration)/simul_duration); // sec/secs (ratio)
+    public static void calculate_P_IDLE(int M_index, int p_index) {
+        P_IDLE[p_index][M_index] = ((t_idle*tick_duration)/simul_duration); // sec/secs (ratio)
 
         // Reset variables that will be used in future intermediate calculations
         t_idle = 0;
