@@ -16,7 +16,7 @@ public class MD1Queue {
 
     public int getSize() { return q.size(); }
 
-    public void remove() {
-        q.remove();
+    public KendallPacket remove() {
+        return q.remove();
     }
 }

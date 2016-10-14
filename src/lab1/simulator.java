@@ -4,8 +4,8 @@ import java.util.ArrayList;
 import java.util.Scanner;
 
 // Note that this class is a singleton so we'll use global variables
+// Note that we're saying that ticks are ints so the max number is only like 2 billion/million or so
 public class simulator {
-    // TODO make sure all ticks are longs
     static boolean is_MD1;
     // Total number of ticks for the simulation (ticks)
     static int num_of_ticks;
@@ -18,13 +18,13 @@ public class simulator {
     // Duration of the simulation (sec)
     static double simul_duration;
     // Current tick (ticks)
-    static long t;
+    static int t;
     // Arrival time of a packet (ticks)
-    static long t_arrival;
+    static int t_arrival;
     // Departure time of a packet (ticks)
-    static long t_departure;
+    static int t_departure;
     // Transmission time (ticks)
-    static long t_transmission;
+    static int t_transmission;
     // Duration of a single tick (sec)
     static double tick_duration;
     // The number of times experiements are repeated
@@ -41,11 +41,17 @@ public class simulator {
     static ArrayList<Integer> sojourn_list;
     static int packets_lost;
     static int packets_generated;
+    static int t_idle;
+    // Boolean that is true if not doing anything in arrival (no new packets coming in), not doing anything in departure
+    // (no old packets leaving). Later combines with a queue is empty check (not servicing packets in queue) to
+    // become a boolean that checks if the simulator is idle
+    static boolean is_mostly_idle;
+
     // Outputs (array size is M)
-    static int E_N[];
-    static int E_T[];
-    static int P_LOSS[];
-    static int P_IDLE[];
+    static int E_N[]; // avg # of packets in the queue (# packets)
+    static int E_T[]; // (ms)
+    static int P_LOSS[]; // (%)
+    static int P_IDLE[]; // (%)
 
     static MD1Queue md1Queue;
     static MD1KQueue md1KQueue;
@@ -60,9 +66,15 @@ public class simulator {
             for (int i = 1; i <= num_of_ticks; i++) {
                 // E_N intermediate calculations
                 t_queue_check_ctr++;
+                is_mostly_idle = true;
 
                 arrival();
                 departure();
+
+                boolean is_idle = is_mostly_idle && md1KQueue.getSize() == 0 && md1Queue.getSize() == 0;
+                if (is_idle) {
+                    t_idle++;
+                }
 
                 if (t_queue_check_ctr % t_queue_check == 0) {
                     t_queue_check_ctr = 0;
@@ -71,7 +83,7 @@ public class simulator {
             }
             calculate_E_N(j);
             calculate_E_T(j);
-            // TODO calculate other outputs
+            calculate_P_IDLE(j);
             if (!is_MD1) {
                 calculate_P_LOSS(j);
             }
@@ -97,6 +109,8 @@ public class simulator {
         queue_size_list = new ArrayList<>();
         packets_lost = 0;
         packets_generated = 0;
+        sojourn_list = new ArrayList<>();
+        t_idle = 0;
 
         // Ask for inputs
         scanner = new Scanner(System.in);
@@ -139,6 +153,7 @@ public class simulator {
 
     public static void arrival() {
         if (t >= t_arrival) {
+            is_mostly_idle = false;
             KendallPacket new_packet = new KendallPacket(packet_size);
             // TODO confirm that this is the correct tick or if it should be t_arrival
             new_packet.setT_generate(t);
@@ -164,6 +179,7 @@ public class simulator {
 
     public static void departure() {
         if (t >= t_departure) {
+            is_mostly_idle = false;
             KendallPacket departed_packet;
             if (is_MD1) {
                 departed_packet = md1Queue.remove();
@@ -175,12 +191,12 @@ public class simulator {
         }
     }
 
-    public static long calc_arrival_time() {
+    public static int calc_arrival_time() {
         double u = Math.random(); // random number between 0 and 1
         double arrival_time =
             ((-1 / packet_gen_rate) * Math.log(1 - u)) / tick_duration;
 
-        return (long) Math.ceil(arrival_time);
+        return (int) Math.ceil(arrival_time);
     }
 
     public static void pick_a_queue() {
@@ -227,27 +243,42 @@ public class simulator {
     }
 
     public static void calculate_E_N(int j) {
-        long sum = 0;
+        int sum = 0;
         for (int i = 0; i < queue_size_list.size(); i++) {
             sum = sum + queue_size_list.get(i);
         }
 
         E_N[j] = sum/queue_size_list.size();
 
-        // Reset variables that will be used in future calculations
+        // Reset variables that will be used in future intermediate calculations
         queue_size_list.clear();
     }
 
     public static void calculate_P_LOSS(int j) {
         P_LOSS[j] = packets_lost/packets_generated;
 
-        // Reset variables that will be used in future calculations
+        // Reset variables that will be used in future intermediate calculations
         packets_lost = 0;
         packets_generated = 0;
     }
 
     public static void calculate_E_T(int j) {
-        long average_sojourn_timeasdfads
-                asdfas
+        double average_sojourn_time = 0;
+
+        for(int i = 0; i < sojourn_list.size(); i++) {
+            average_sojourn_time = average_sojourn_time + sojourn_list.get(i)*tick_duration;
+        }
+
+        E_T[j] = (int)(average_sojourn_time/sojourn_list.size());
+
+        // Reset variables that will be used in future intermediate calculations
+        sojourn_list.clear();
+    }
+
+    public static void calculate_P_IDLE(int j) {
+        P_IDLE[j] = (int)((t_idle*tick_duration)/simul_duration); // sec/secs (ratio)
+
+        // Reset variables that will be used in future intermediate calculations
+        t_idle = 0;
     }
 }
