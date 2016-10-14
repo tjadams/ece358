@@ -29,8 +29,4 @@ public class MD1KQueue {
     public KendallPacket remove() {
         return q.remove();
     }
-
-    public KendallPacket peek() {
-        return q.peek();
-    }
 }
