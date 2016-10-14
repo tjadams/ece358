@@ -267,14 +267,32 @@ public class simulator {
 
     // Display outputs
     public static void create_report(int p_index) {
+        System.out.print("E_N: ");
         for (int i = 0; i < M; i++) {
-            System.out.println("E{N] for M-1= " + i + " is: " + E_N[p_index][i]);
-            System.out.println("E{T] for M-1 = " + i + " is: " + E_T[p_index][i]);
-            System.out.println("P_IDLE for M-1 = " + i + " is: " + P_IDLE[p_index][i]);
-            if (!is_MD1) {
-                System.out.println("P_LOSS for M-1 = " + i + " is: " + P_LOSS[p_index][i]);
-            }
+            System.out.print(E_N[p_index][i] + " ");
         }
+        System.out.println();
+
+        System.out.print("E_T: ");
+        for (int i = 0; i < M; i++) {
+            System.out.print(E_T[p_index][i] + " ");
+        }
+        System.out.println();
+
+        System.out.print("P_IDLE: ");
+        for (int i = 0; i < M; i++) {
+            System.out.print(P_IDLE[p_index][i] + " ");
+        }
+        System.out.println();
+
+        if(!is_MD1) {
+            System.out.print("P_LOSS: ");
+            for (int i = 0; i < M; i++) {
+                System.out.print(P_LOSS[p_index][i] + " ");
+            }
+            System.out.println();
+        }
+        System.out.println();
     }
 
     public static void calculate_E_N(int M_index, int p_index) {
