@@ -83,7 +83,13 @@ public class simulator {
                     departure();
 
                     // more intermediate calculations for outputs
-                    boolean is_idle = is_mostly_idle && md1KQueue.getSize() == 0 && md1Queue.getSize() == 0;
+                    boolean is_idle;
+                    if (is_MD1) {
+                        is_idle = is_mostly_idle && md1Queue.getSize() == 0;
+                    } else {
+                        is_idle = is_mostly_idle && md1KQueue.getSize() == 0;
+                    }
+
                     if (is_idle) {
                         t_idle++;
                     }
@@ -129,23 +135,19 @@ public class simulator {
         System.out.println("Hello! Welcome to the simulation.");
 
         // Receive ms, store in seconds.
-        System.out.println("Duration for each tick (in ms) <= 1 ms: ");
+//        System.out.println("Duration for each tick (in ms) <= 1 ms: ");
         // (sec) = (ms) / (1000 ms / sec)
-        tick_duration = scanner.nextDouble() / MS_PER_SEC;
+//        tick_duration = scanner.nextDouble() / MS_PER_SEC;
+        tick_duration = 1000 / MS_PER_SEC;
 
         // Receive minutes, store in seconds.
-        System.out.println("Simulation time (in minutes): ");
+//        System.out.println("Simulation time (in minutes): ");
         // (min) = (min) * (60 sec / min)
-        simul_duration = scanner.nextDouble() * SEC_PER_MIN;
+//        simul_duration = scanner.nextDouble() * SEC_PER_MIN;
+        simul_duration = 10 * SEC_PER_MIN;
 
         // (ticks) = (sec) / (sec / tick)
         num_of_ticks = (int) Math.ceil(simul_duration / tick_duration);
-
-
-        System.out.println(
-            "\u03BB, Average number of packets generated/arrived  (packets/sec): "
-        );
-        lambda = scanner.nextInt();
 
         System.out.println("L, Length of a packet (bits): ");
         L = scanner.nextInt();
@@ -164,9 +166,13 @@ public class simulator {
     public static void arrival() {
         if (t >= t_arrival) {
             is_mostly_idle = false;
+            t_departure = t + t_transmission;
+
             KendallPacket new_packet = new KendallPacket(L);
             // TODO confirm that this is the correct tick or if it should be t_arrival
             new_packet.setT_generate(t);
+            new_packet.setT_arrival(t_arrival);
+            new_packet.setT_departure(t_departure);
 
             if (is_MD1) {
                 md1Queue.add(new_packet);
@@ -183,19 +189,20 @@ public class simulator {
             }
 
             t_arrival = t + calc_arrival_time();
-            t_departure = t + t_transmission;
         }
     }
 
     public static void departure() {
-        if (t >= t_departure) {
+        if (is_MD1 && md1Queue.getSize() != 0 && t >= md1Queue.peek().getT_departure()) {
             is_mostly_idle = false;
             KendallPacket departed_packet;
-            if (is_MD1) {
-                departed_packet = md1Queue.remove();
-            } else {
-                departed_packet = md1KQueue.remove();
-            }
+            departed_packet = md1Queue.remove();
+            departed_packet.setT_finished(t);
+            sojourn_list.add(departed_packet.getSojournAmountOfTicks());
+        } else if (!is_MD1 && md1KQueue.getSize() != 0 && t >= md1KQueue.peek().getT_departure()) {
+            is_mostly_idle = false;
+            KendallPacket departed_packet;
+            departed_packet = md1KQueue.remove();
             departed_packet.setT_finished(t);
             sojourn_list.add(departed_packet.getSojournAmountOfTicks());
         }
