@@ -59,10 +59,9 @@ public class simulator {
         while (p_index < p_num_steps) {
             lambda = (p_value*C/((double)L));
             for (int M_index = 0; M_index < M; M_index++) {
-                // Make sure that the first packet enters the queue before departing it
-                t_departure = Integer.MAX_VALUE;
                 // Get first packet arrival time
                 t_arrival = calc_arrival_time();
+                t_departure = t_arrival + t_transmission;
                 long sum_of_packets_in_queue = 0;
                 soujourn_ticks = 0;
                 total_packets = 0;
@@ -110,7 +109,9 @@ public class simulator {
         scanner = new Scanner(System.in);
         System.out.println("Hello! Welcome to the simulation.");
 
-        ticks_in_one_second =  1000000;
+//        ticks_in_one_second =  1000000;
+        ticks_in_one_second =  1000;
+
 
         // TODO could just have this be an input. That's more correct. 5million for 10,25, 50. 2.5million for inf buffer.
         num_of_ticks = 2500000;
@@ -130,7 +131,7 @@ public class simulator {
 
         // (ticks) = ((bits) / (bits / sec)) * (ticks / sec)
         t_transmission = (int) Math.ceil(
-            ((double)L / C) * ticks_in_one_second
+            ((double)L /(double)C) * (double)ticks_in_one_second
         );
 
         scanner.close();
@@ -165,25 +166,24 @@ public class simulator {
 
     public static void departure(int t) {
         if (t >= t_departure) {
-            if (is_MD1) {
+            if (is_MD1 && md1Queue.getSize() != 0) {
                 KendallPacket departed_packet;
                 departed_packet = md1Queue.remove();
                 departed_packet.setT_finished(t);
-            } else if (!is_MD1) {
+                soujourn_ticks = soujourn_ticks + t - t_departure + t_transmission;
+            } else if (!is_MD1 && md1KQueue.getSize() != 0) {
                 KendallPacket departed_packet;
                 departed_packet = md1KQueue.remove();
                 departed_packet.setT_finished(t);
+                soujourn_ticks = soujourn_ticks + t - t_departure + t_transmission;
             }
-            soujourn_ticks = soujourn_ticks + t - t_departure + t_transmission;
-            // Don't come back to this unless arrival changes the tick value
-            t_departure = Integer.MAX_VALUE;
         }
     }
 
     public static int calc_arrival_time() {
         double u = Math.random(); // random number between 0 and 1
         double arrival_time =
-            ((-1 / lambda) * Math.log(1 - u) * ticks_in_one_second);
+            (((double)-1 / (double)lambda) * (double)Math.log(1 - u) * (double)ticks_in_one_second);
 
         return (int) Math.ceil(arrival_time);
     }
@@ -208,7 +208,7 @@ public class simulator {
             System.out.println("M/D/1 queue selected.");
 
             md1Queue = new MD1Queue();
-            p_num_steps = 6; // 8, 7, 6, 5, 4, 3 = 8 total
+            p_num_steps = 6; // 0.8, 7, 6, 5, 4, 3 = 8 total
             p_start =  0.3;
             p_end = 0.8;
         } else {
