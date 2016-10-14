@@ -28,13 +28,6 @@ public class simulator {
     static int M;
     // An instance of the size of the MD1 or MD1K queue
     static int queue_size;
-    static int packets_lost;
-    static int packets_generated;
-    static int t_idle;
-    // Boolean that is true if not doing anything in arrival (no new packets coming in), not doing anything in departure
-    // (no old packets leaving). Later combines with a queue is empty check (not servicing packets in queue) to
-    // become a boolean that checks if the simulator is idle
-    static boolean is_mostly_idle;
 
     // Represents the rho inequalities as in question 2 and for from the report
     static double p_step_size;
@@ -51,6 +44,8 @@ public class simulator {
     static int ticks_in_one_second;
     static long soujourn_ticks;
     static long total_packets;
+    static int ticks_idle;
+    static int packets_dropped;
 
     static MD1Queue md1Queue;
     static MD1KQueue md1KQueue;
@@ -71,6 +66,8 @@ public class simulator {
                 long sum_of_packets_in_queue = 0;
                 soujourn_ticks = 0;
                 total_packets = 0;
+                ticks_idle = 0;
+                packets_dropped = 0;
                 for (int t = 1; t <= num_of_ticks; t++) {
                     arrival(t);
                     departure(t);
@@ -78,8 +75,14 @@ public class simulator {
                     // more intermediate calculations for outputs
                     if (is_MD1) {
                         sum_of_packets_in_queue = sum_of_packets_in_queue + md1Queue.getSize();
+                        if (md1Queue.getSize() == 0) {
+                            ticks_idle++;
+                        }
                     } else {
                         sum_of_packets_in_queue = sum_of_packets_in_queue + md1KQueue.getSize();
+                        if (md1KQueue.getSize() == 0) {
+                            ticks_idle++;
+                        }
                     }
                 }
 
@@ -102,11 +105,6 @@ public class simulator {
         pick_a_queue();
 
         p_step_size = 0.1;
-
-        packets_lost = 0;
-        packets_generated = 0;
-        t_idle = 0;
-
 
         // Ask for inputs
         scanner = new Scanner(System.in);
@@ -141,7 +139,6 @@ public class simulator {
     public static void arrival(int t) {
         if (t >= t_arrival) {
             total_packets++;
-            is_mostly_idle = false;
             t_departure = t + t_transmission;
 
             KendallPacket new_packet = new KendallPacket(L);
@@ -153,14 +150,12 @@ public class simulator {
             if (is_MD1) {
                 md1Queue.add(new_packet);
                 queue_size = md1Queue.getSize();
-                packets_generated++;
             } else {
-                boolean isAddSuccessful = md1KQueue.add(new_packet);
-                queue_size = md1KQueue.getSize();
-                if (!isAddSuccessful) {
-                    packets_lost++;
+                if (md1KQueue.getSize() == md1KQueue.getK()) {
+                    packets_dropped++;
                 } else {
-                    packets_generated++;
+                    md1KQueue.add(new_packet);
+                    queue_size = md1KQueue.getSize();
                 }
             }
 
@@ -170,7 +165,6 @@ public class simulator {
 
     public static void departure(int t) {
         if (t >= t_departure) {
-            is_mostly_idle = false;
             if (is_MD1) {
                 KendallPacket departed_packet;
                 departed_packet = md1Queue.remove();
@@ -238,7 +232,6 @@ public class simulator {
 
     // Display outputs
     public static void create_report(int p_index) {
-        /*
         System.out.print("E_N["+p_index+"]: ");
         double running_e_n = 0;
         for (int i = 0; i < M; i++) {
@@ -246,7 +239,7 @@ public class simulator {
         }
         running_e_n = running_e_n / M;
         System.out.println(running_e_n);
-*/
+
         System.out.print("E_T["+p_index+"]: ");
         double running_e_t = 0;
         for (int i = 0; i < M; i++) {
@@ -254,9 +247,7 @@ public class simulator {
         }
         running_e_t = running_e_t / M;
         System.out.println(running_e_t);
-        System.out.println();
 
-        /*
         System.out.print("P_IDLE["+p_index+"]: ");
         double running_p_idle = 0;
         for (int i = 0; i < M; i++) {
@@ -264,7 +255,6 @@ public class simulator {
         }
         running_p_idle = running_p_idle / M;
         System.out.println(running_p_idle);
-        System.out.println();
 
         if(!is_MD1) {
             System.out.print("P_LOSS["+p_index+"]: ");
@@ -274,21 +264,17 @@ public class simulator {
             }
             running_p_loss = running_p_loss / M;
             System.out.println(running_p_loss);
-            System.out.println();
         }
-        */
+
+        System.out.println();
     }
 
     public static void calculate_E_N(int M_index, int p_index, long sum_of_packets_in_queue) {
-        E_N[p_index][M_index] = ((double)sum_of_packets_in_queue/((double)num_of_ticks));
+        E_N[p_index][M_index] = (double)sum_of_packets_in_queue/(double)num_of_ticks;
     }
 
     public static void calculate_P_LOSS(int M_index, int p_index) {
-        P_LOSS[p_index][M_index] = packets_lost/packets_generated;
-
-        // Reset variables that will be used in future intermediate calculations
-        packets_lost = 0;
-        packets_generated = 0;
+        P_LOSS[p_index][M_index] = packets_dropped/(double)total_packets;
     }
 
     public static void calculate_E_T(int M_index, int p_index) {
@@ -296,9 +282,6 @@ public class simulator {
     }
 
     public static void calculate_P_IDLE(int M_index, int p_index) {
-        P_IDLE[p_index][M_index] = ((t_idle*ticks_in_one_second)/simul_duration); // sec/secs (ratio)
-
-        // Reset variables that will be used in future intermediate calculations
-        t_idle = 0;
+        P_IDLE[p_index][M_index] = (double)ticks_idle/(double)num_of_ticks;
     }
 }
