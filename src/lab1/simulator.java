@@ -23,7 +23,7 @@ public class simulator {
     // Transmission time (ticks)
     static int t_transmission;
     // Duration of a single tick (sec)
-    static double tick_duration;
+//    static double tick_duration;
     // The number of times experiements are repeated
     static int M;
     // Check queue size every t_queue_check number of ticks (used for E_N calculations)
@@ -55,6 +55,8 @@ public class simulator {
     static int E_T[][]; // (ms)
     static double P_LOSS[][]; // (%)
     static double P_IDLE[][]; // (%)
+
+    static int ticks_in_one_second;
 
     static MD1Queue md1Queue;
     static MD1KQueue md1KQueue;
@@ -138,7 +140,8 @@ public class simulator {
 //        System.out.println("Duration for each tick (in ms) <= 1 ms: ");
         // (sec) = (ms) / (1000 ms / sec)
 //        tick_duration = scanner.nextDouble() / MS_PER_SEC;
-        tick_duration = 1000 / MS_PER_SEC;
+        ticks_in_one_second =  1000;
+//        tick_duration = ticks_in_one_second / MS_PER_SEC;
 
         // Receive minutes, store in seconds.
 //        System.out.println("Simulation time (in minutes): ");
@@ -147,7 +150,8 @@ public class simulator {
         simul_duration = 10 * SEC_PER_MIN;
 
         // (ticks) = (sec) / (sec / tick)
-        num_of_ticks = (int) Math.ceil(simul_duration / tick_duration);
+        // TODO could just input this. That's more correct. 5million for 10,25, 50. 2.5million for inf buffer.
+        num_of_ticks = (int) Math.ceil(simul_duration / (ticks_in_one_second / MS_PER_SEC));
 
         // TODO uncomment this
         /*
@@ -162,9 +166,9 @@ public class simulator {
 
         lambda = p_start*C/(double)L;
 
-        // (ticks) = ((bits) / (bits / sec)) / (sec / tick)
+        // (ticks) = ((bits) / (bits / sec)) * (ticks / sec)
         t_transmission = (int) Math.ceil(
-            ((double)L / C) / tick_duration
+            ((double)L / C) * ticks_in_one_second
         );
 
         scanner.close();
@@ -218,7 +222,7 @@ public class simulator {
     public static int calc_arrival_time() {
         double u = Math.random(); // random number between 0 and 1
         double arrival_time =
-            ((-1 / lambda) * Math.log(1 - u)) / tick_duration;
+            ((-1 / lambda) * Math.log(1 - u) * ticks_in_one_second);
 
         return (int) Math.ceil(arrival_time);
     }
@@ -303,6 +307,9 @@ public class simulator {
 
         E_N[p_index][M_index] = sum/queue_size_list.size();
 
+
+
+
         // Reset variables that will be used in future intermediate calculations
         queue_size_list.clear();
     }
@@ -319,7 +326,7 @@ public class simulator {
         double average_sojourn_time = 0;
 
         for(int i = 0; i < sojourn_list.size(); i++) {
-            average_sojourn_time = average_sojourn_time + sojourn_list.get(i)*tick_duration;
+            average_sojourn_time = average_sojourn_time + sojourn_list.get(i)*ticks_in_one_second;
         }
 
         E_T[p_index][M_index] = (int)(average_sojourn_time/sojourn_list.size());
@@ -329,7 +336,7 @@ public class simulator {
     }
 
     public static void calculate_P_IDLE(int M_index, int p_index) {
-        P_IDLE[p_index][M_index] = ((t_idle*tick_duration)/simul_duration); // sec/secs (ratio)
+        P_IDLE[p_index][M_index] = ((t_idle*ticks_in_one_second)/simul_duration); // sec/secs (ratio)
 
         // Reset variables that will be used in future intermediate calculations
         t_idle = 0;
