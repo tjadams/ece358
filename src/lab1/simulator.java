@@ -59,27 +59,23 @@ public class simulator {
     public static void main(String args[]) {
         initialize_variables();
 
-        // TODO Think about if i need to reset variables and ticks for p etc
         int p_index = 0;
         double p_value = p_start;
         while (p_index < p_num_steps) {
             lambda = (p_value*C/((double)L));
             for (int M_index = 0; M_index < M; M_index++) {
-                t_arrival = calc_arrival_time();
                 // Make sure that the first packet enters the queue before departing it
                 t_departure = Integer.MAX_VALUE;
+                // Get first packet arrival time
+                t_arrival = calc_arrival_time();
                 long sum_of_packets_in_queue = 0;
                 for (int t = 1; t <= num_of_ticks; t++) {
                     arrival(t);
                     departure(t);
 
                     // more intermediate calculations for outputs
-
                     if (is_MD1) {
                         sum_of_packets_in_queue = sum_of_packets_in_queue + md1Queue.getSize();
-//                        if (t == 10000) {
-//                            System.out.println("test");
-//                        }
                     } else {
                         sum_of_packets_in_queue = sum_of_packets_in_queue + md1KQueue.getSize();
                     }
@@ -167,7 +163,6 @@ public class simulator {
             }
 
             t_arrival = t + calc_arrival_time();
-//            System.out.println("test 2");
         }
     }
 
@@ -243,55 +238,51 @@ public class simulator {
 
     // Display outputs
     public static void create_report(int p_index) {
+        /*
         System.out.print("E_N["+p_index+"]: ");
         double running_e_n = 0;
         for (int i = 0; i < M; i++) {
             running_e_n = running_e_n + E_N[p_index][i];
         }
         running_e_n = running_e_n / M;
-        System.out.print(running_e_n);
-//        System.out.println();
+        System.out.println(running_e_n);
+        System.out.println();
+*/
 
-        System.out.print(" E_T["+p_index+"]: ");
+        System.out.print("E_T["+p_index+"]: ");
         double running_e_t = 0;
         for (int i = 0; i < M; i++) {
             running_e_t = running_e_t + E_T[p_index][i];
         }
         running_e_t = running_e_t / M;
-        System.out.print(running_e_t);
+        System.out.println(running_e_t);
         System.out.println();
-
 
         /*
-        System.out.print("E_T: ");
+        System.out.print("P_IDLE["+p_index+"]: ");
+        double running_p_idle = 0;
         for (int i = 0; i < M; i++) {
-            System.out.print(E_T[p_index][i] + " ");
+            running_p_idle = running_p_idle + P_IDLE[p_index][i];
         }
-        System.out.println();
-
-        System.out.print("P_IDLE: ");
-        for (int i = 0; i < M; i++) {
-            System.out.print(P_IDLE[p_index][i] + " ");
-        }
+        running_p_idle = running_p_idle / M;
+        System.out.println(running_p_idle);
         System.out.println();
 
         if(!is_MD1) {
-            System.out.print("P_LOSS: ");
+            System.out.print("P_LOSS["+p_index+"]: ");
+            double running_p_loss = 0;
             for (int i = 0; i < M; i++) {
-                System.out.print(P_LOSS[p_index][i] + " ");
+                running_p_loss = running_p_loss + P_LOSS[p_index][i];
             }
+            running_p_loss = running_p_loss / M;
+            System.out.println(running_p_loss);
             System.out.println();
         }
-        System.out.println();
         */
     }
 
     public static void calculate_E_N(int M_index, int p_index, long sum_of_packets_in_queue) {
-        // TODO unsure which one to use
-        E_N[p_index][M_index] = (double)sum_of_packets_in_queue/((double)num_of_ticks*(double)ticks_in_one_second);
-//        E_N[p_index][M_index] = ((double)sum_of_packets_in_queue/((double)num_of_ticks));
-
-//        System.out.println("test");
+        E_N[p_index][M_index] = ((double)sum_of_packets_in_queue/((double)num_of_ticks));
     }
 
     public static void calculate_P_LOSS(int M_index, int p_index) {
