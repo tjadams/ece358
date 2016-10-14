@@ -278,7 +278,7 @@ public class simulator {
     }
 
     public static void calculate_E_T(int M_index, int p_index) {
-        E_T[p_index][M_index] = (double)soujourn_ticks/(double)total_packets;
+        E_T[p_index][M_index] = (double)soujourn_ticks*ticks_in_one_second/(double)total_packets;
     }
 
     public static void calculate_P_IDLE(int M_index, int p_index) {
