@@ -128,7 +128,7 @@ public class simulator {
         System.out.println("C, Transmission rate (bits/sec): ");
         C = scanner.nextDouble();
         */
-        C = 1000000000;
+        C = 1000000;
         L = 2000;
 
         lambda = p_start*C/(double)L;
@@ -247,11 +247,20 @@ public class simulator {
         double running_e_n = 0;
         for (int i = 0; i < M; i++) {
             running_e_n = running_e_n + E_N[p_index][i];
-//            System.out.print(E_N[p_index][i] + " ");
         }
         running_e_n = running_e_n / M;
         System.out.print(running_e_n);
+//        System.out.println();
+
+        System.out.print(" E_T["+p_index+"]: ");
+        double running_e_t = 0;
+        for (int i = 0; i < M; i++) {
+            running_e_t = running_e_t + E_T[p_index][i];
+        }
+        running_e_t = running_e_t / M;
+        System.out.print(running_e_t);
         System.out.println();
+
 
         /*
         System.out.print("E_T: ");
