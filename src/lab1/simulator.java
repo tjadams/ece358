@@ -13,11 +13,9 @@ public class simulator {
     static double lambda;
     // Packet size (bits)
     static int L;
-    static int C;
+    static double C;
     // Duration of the simulation (sec)
     static double simul_duration;
-    // Current tick (ticks)
-    static int t;
     // Arrival time of a packet (ticks)
     static int t_arrival;
     // Departure time of a packet (ticks)
@@ -70,7 +68,7 @@ public class simulator {
         int p_index = 0;
         double p_value = p_start;
         while (p_index < p_num_steps) {
-            lambda = p_value*C/L;
+            lambda = p_value*C/(double)L;
             p_value += p_step_size;
             for (int j = 0; j < M; j++) {
                 for (int i = 1; i <= num_of_ticks; i++) {
@@ -79,8 +77,8 @@ public class simulator {
                     is_mostly_idle = true;
 
                     // simulate
-                    arrival();
-                    departure();
+                    arrival(i);
+                    departure(i);
 
                     // more intermediate calculations for outputs
                     boolean is_idle;
@@ -113,10 +111,12 @@ public class simulator {
     }
 
     public static void initialize_variables() {
+        M = 5;
+
+        pick_a_queue();
+
         final int MS_PER_SEC = 1000;
         final int SEC_PER_MIN = 60;
-
-        M = 5;
 
         p_step_size = 0.1;
 
@@ -149,21 +149,28 @@ public class simulator {
         // (ticks) = (sec) / (sec / tick)
         num_of_ticks = (int) Math.ceil(simul_duration / tick_duration);
 
+        // TODO uncomment this
+        /*
         System.out.println("L, Length of a packet (bits): ");
         L = scanner.nextInt();
 
         System.out.println("C, Transmission rate (bits/sec): ");
-        C = scanner.nextInt();
+        C = scanner.nextDouble();
+        */
+        C = 1000000000;
+        L = 2000;
+
+        lambda = p_start*C/(double)L;
 
         // (ticks) = ((bits) / (bits / sec)) / (sec / tick)
         t_transmission = (int) Math.ceil(
-            (L / C) / tick_duration
+            ((double)L / C) / tick_duration
         );
 
-        pick_a_queue();
+        scanner.close();
     }
 
-    public static void arrival() {
+    public static void arrival(int t) {
         if (t >= t_arrival) {
             is_mostly_idle = false;
             t_departure = t + t_transmission;
@@ -192,7 +199,7 @@ public class simulator {
         }
     }
 
-    public static void departure() {
+    public static void departure(int t) {
         if (is_MD1 && md1Queue.getSize() != 0 && t >= md1Queue.peek().getT_departure()) {
             is_mostly_idle = false;
             KendallPacket departed_packet;
@@ -221,8 +228,10 @@ public class simulator {
         final String MD1K = "n";
         final String msg = "M/D/1 queue (y) or a M/D/1/K queue (n)? (y/n)";
 
-        System.out.println(msg);
-        String choice = scanner.next();
+        // TODO uncomment this
+//        System.out.println(msg);
+//        String choice = scanner.next();
+        String choice = MD1;
 
         while (!(choice.equals(MD1) || choice.equals(MD1K))) {
             System.out.println(msg);
@@ -254,8 +263,6 @@ public class simulator {
         E_N = new double [p_num_steps][M];
         E_T = new int [p_num_steps][M];
         P_IDLE = new double [p_num_steps][M];
-
-        scanner.close();
     }
 
     // Display outputs
