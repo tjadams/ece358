@@ -26,14 +26,8 @@ public class simulator {
 //    static double tick_duration;
     // The number of times experiements are repeated
     static int M;
-    // Check queue size every t_queue_check number of ticks (used for E_N calculations)
-    static int t_queue_check;
-    // Counter modulo t_queue_check that counts number of ticks
-    static int t_queue_check_ctr;
     // An instance of the size of the MD1 or MD1K queue
     static int queue_size;
-    // List that contains instances of the size of the respective MD1 or MD1K queue every t_queue_check amount of ticks
-    static ArrayList<Integer> queue_size_list;
     // List that contains the sojourn amount of ticks of each packet (used for the E_T calculation)
     static ArrayList<Integer> sojourn_list;
     static int packets_lost;
@@ -65,50 +59,42 @@ public class simulator {
     public static void main(String args[]) {
         initialize_variables();
 
-        t_arrival = calc_arrival_time(); // calculate first packet arrival time
         // TODO Think about if i need to reset variables and ticks for p etc
         int p_index = 0;
         double p_value = p_start;
         while (p_index < p_num_steps) {
-            lambda = p_value*C/(double)L;
-            p_value += p_step_size;
-            for (int j = 0; j < M; j++) {
-                for (int i = 1; i <= num_of_ticks; i++) {
-                    // intermediate calculations for outputs
-                    t_queue_check_ctr++;
-                    is_mostly_idle = true;
-
-                    // simulate
-                    arrival(i);
-                    departure(i);
+            lambda = (p_value*C/((double)L));
+            for (int M_index = 0; M_index < M; M_index++) {
+                t_arrival = calc_arrival_time();
+                // Make sure that the first packet enters the queue before departing it
+                t_departure = Integer.MAX_VALUE;
+                long sum_of_packets_in_queue = 0;
+                for (int t = 1; t <= num_of_ticks; t++) {
+                    arrival(t);
+                    departure(t);
 
                     // more intermediate calculations for outputs
-                    boolean is_idle;
+
                     if (is_MD1) {
-                        is_idle = is_mostly_idle && md1Queue.getSize() == 0;
+                        sum_of_packets_in_queue = sum_of_packets_in_queue + md1Queue.getSize();
+//                        if (t == 10000) {
+//                            System.out.println("test");
+//                        }
                     } else {
-                        is_idle = is_mostly_idle && md1KQueue.getSize() == 0;
-                    }
-
-                    if (is_idle) {
-                        t_idle++;
-                    }
-
-                    if (t_queue_check_ctr % t_queue_check == 0) {
-                        t_queue_check_ctr = 0;
-                        queue_size_list.add(queue_size);
+                        sum_of_packets_in_queue = sum_of_packets_in_queue + md1KQueue.getSize();
                     }
                 }
 
-                calculate_E_N(j, p_index);
-                calculate_E_T(j, p_index);
-                calculate_P_IDLE(j, p_index);
+                calculate_E_N(M_index, p_index, sum_of_packets_in_queue);
+                calculate_E_T(M_index, p_index);
+                calculate_P_IDLE(M_index, p_index);
                 if (!is_MD1) {
-                    calculate_P_LOSS(j, p_index);
+                    calculate_P_LOSS(M_index, p_index);
                 }
             }
             create_report(p_index);
             p_index++;
+            p_value += p_step_size;
         }
     }
 
@@ -117,41 +103,22 @@ public class simulator {
 
         pick_a_queue();
 
-        final int MS_PER_SEC = 1000;
-        final int SEC_PER_MIN = 60;
-
         p_step_size = 0.1;
 
-        // Check every 5 ticks
-        t_queue_check = 5;
-
-        t_queue_check_ctr = 0;
-        queue_size_list = new ArrayList<>();
         packets_lost = 0;
         packets_generated = 0;
         sojourn_list = new ArrayList<>();
         t_idle = 0;
 
+
         // Ask for inputs
         scanner = new Scanner(System.in);
         System.out.println("Hello! Welcome to the simulation.");
 
-        // Receive ms, store in seconds.
-//        System.out.println("Duration for each tick (in ms) <= 1 ms: ");
-        // (sec) = (ms) / (1000 ms / sec)
-//        tick_duration = scanner.nextDouble() / MS_PER_SEC;
-        ticks_in_one_second =  1000;
-//        tick_duration = ticks_in_one_second / MS_PER_SEC;
+        ticks_in_one_second =  1000000;
 
-        // Receive minutes, store in seconds.
-//        System.out.println("Simulation time (in minutes): ");
-        // (min) = (min) * (60 sec / min)
-//        simul_duration = scanner.nextDouble() * SEC_PER_MIN;
-        simul_duration = 10 * SEC_PER_MIN;
-
-        // (ticks) = (sec) / (sec / tick)
-        // TODO could just input this. That's more correct. 5million for 10,25, 50. 2.5million for inf buffer.
-        num_of_ticks = (int) Math.ceil(simul_duration / (ticks_in_one_second / MS_PER_SEC));
+        // TODO could just have this be an input. That's more correct. 5million for 10,25, 50. 2.5million for inf buffer.
+        num_of_ticks = 2500000;
 
         // TODO uncomment this
         /*
@@ -200,22 +167,27 @@ public class simulator {
             }
 
             t_arrival = t + calc_arrival_time();
+//            System.out.println("test 2");
         }
     }
 
     public static void departure(int t) {
-        if (is_MD1 && md1Queue.getSize() != 0 && t >= md1Queue.peek().getT_departure()) {
-            is_mostly_idle = false;
-            KendallPacket departed_packet;
-            departed_packet = md1Queue.remove();
-            departed_packet.setT_finished(t);
-            sojourn_list.add(departed_packet.getSojournAmountOfTicks());
-        } else if (!is_MD1 && md1KQueue.getSize() != 0 && t >= md1KQueue.peek().getT_departure()) {
-            is_mostly_idle = false;
-            KendallPacket departed_packet;
-            departed_packet = md1KQueue.remove();
-            departed_packet.setT_finished(t);
-            sojourn_list.add(departed_packet.getSojournAmountOfTicks());
+        if (t >= t_departure) {
+            if (is_MD1) {
+                is_mostly_idle = false;
+                KendallPacket departed_packet;
+                departed_packet = md1Queue.remove();
+                departed_packet.setT_finished(t);
+                sojourn_list.add(departed_packet.getSojournAmountOfTicks());
+            } else if (!is_MD1) {
+                is_mostly_idle = false;
+                KendallPacket departed_packet;
+                departed_packet = md1KQueue.remove();
+                departed_packet.setT_finished(t);
+                sojourn_list.add(departed_packet.getSojournAmountOfTicks());
+            }
+            // Don't come back to this unless arrival changes the tick value
+            t_departure = Integer.MAX_VALUE;
         }
     }
 
@@ -247,9 +219,9 @@ public class simulator {
             System.out.println("M/D/1 queue selected.");
 
             md1Queue = new MD1Queue();
-            p_num_steps = 8; // 0.9, 8, 7, 6, 5, 4, 3, 2 = 8 total
-            p_start =  0.2;
-            p_end = 0.9;
+            p_num_steps = 6; // 8, 7, 6, 5, 4, 3 = 8 total
+            p_start =  0.3;
+            p_end = 0.8;
         } else {
             is_MD1 = false;
             System.out.println("M/D/1/K queue selected.");
@@ -258,9 +230,9 @@ public class simulator {
             int K = scanner.nextInt();
 
             md1KQueue = new MD1KQueue(K);
-            p_num_steps = 11; // 1.5, 1.4, 1.3, 1.2, 1.1, 1.0, 0.9, 0.8, 0.7, 0.6, 0.5 = 11 total
-            p_start = 0.5;
-            p_end = 1.5;
+            p_num_steps = 9; // 1.4, 1.3, 1.2, 1.1, 1.0, 0.9, 0.8, 0.7, 0.6 = 9 total
+            p_start = 0.6;
+            p_end = 1.4;
             P_LOSS = new double [p_num_steps][M];
         }
 
@@ -271,12 +243,17 @@ public class simulator {
 
     // Display outputs
     public static void create_report(int p_index) {
-        System.out.print("E_N: ");
+        System.out.print("E_N["+p_index+"]: ");
+        double running_e_n = 0;
         for (int i = 0; i < M; i++) {
-            System.out.print(E_N[p_index][i] + " ");
+            running_e_n = running_e_n + E_N[p_index][i];
+//            System.out.print(E_N[p_index][i] + " ");
         }
+        running_e_n = running_e_n / M;
+        System.out.print(running_e_n);
         System.out.println();
 
+        /*
         System.out.print("E_T: ");
         for (int i = 0; i < M; i++) {
             System.out.print(E_T[p_index][i] + " ");
@@ -297,21 +274,15 @@ public class simulator {
             System.out.println();
         }
         System.out.println();
+        */
     }
 
-    public static void calculate_E_N(int M_index, int p_index) {
-        int sum = 0;
-        for (int i = 0; i < queue_size_list.size(); i++) {
-            sum = sum + queue_size_list.get(i);
-        }
+    public static void calculate_E_N(int M_index, int p_index, long sum_of_packets_in_queue) {
+        // TODO unsure which one to use
+        E_N[p_index][M_index] = (double)sum_of_packets_in_queue/((double)num_of_ticks*(double)ticks_in_one_second);
+//        E_N[p_index][M_index] = ((double)sum_of_packets_in_queue/((double)num_of_ticks));
 
-        E_N[p_index][M_index] = sum/queue_size_list.size();
-
-
-
-
-        // Reset variables that will be used in future intermediate calculations
-        queue_size_list.clear();
+//        System.out.println("test");
     }
 
     public static void calculate_P_LOSS(int M_index, int p_index) {
