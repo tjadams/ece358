@@ -28,8 +28,6 @@ public class simulator {
     static int M;
     // An instance of the size of the MD1 or MD1K queue
     static int queue_size;
-    // List that contains the sojourn amount of ticks of each packet (used for the E_T calculation)
-    static ArrayList<Integer> sojourn_list;
     static int packets_lost;
     static int packets_generated;
     static int t_idle;
@@ -46,11 +44,13 @@ public class simulator {
 
     // Outputs (array size is M)
     static double E_N[][]; // avg # of packets in the queue (# packets)
-    static int E_T[][]; // (ms)
+    static double E_T[][]; // (ms)
     static double P_LOSS[][]; // (%)
     static double P_IDLE[][]; // (%)
 
     static int ticks_in_one_second;
+    static long soujourn_ticks;
+    static long total_packets;
 
     static MD1Queue md1Queue;
     static MD1KQueue md1KQueue;
@@ -69,6 +69,8 @@ public class simulator {
                 // Get first packet arrival time
                 t_arrival = calc_arrival_time();
                 long sum_of_packets_in_queue = 0;
+                soujourn_ticks = 0;
+                total_packets = 0;
                 for (int t = 1; t <= num_of_ticks; t++) {
                     arrival(t);
                     departure(t);
@@ -103,7 +105,6 @@ public class simulator {
 
         packets_lost = 0;
         packets_generated = 0;
-        sojourn_list = new ArrayList<>();
         t_idle = 0;
 
 
@@ -139,6 +140,7 @@ public class simulator {
 
     public static void arrival(int t) {
         if (t >= t_arrival) {
+            total_packets++;
             is_mostly_idle = false;
             t_departure = t + t_transmission;
 
@@ -168,19 +170,17 @@ public class simulator {
 
     public static void departure(int t) {
         if (t >= t_departure) {
+            is_mostly_idle = false;
             if (is_MD1) {
-                is_mostly_idle = false;
                 KendallPacket departed_packet;
                 departed_packet = md1Queue.remove();
                 departed_packet.setT_finished(t);
-                sojourn_list.add(departed_packet.getSojournAmountOfTicks());
             } else if (!is_MD1) {
-                is_mostly_idle = false;
                 KendallPacket departed_packet;
                 departed_packet = md1KQueue.remove();
                 departed_packet.setT_finished(t);
-                sojourn_list.add(departed_packet.getSojournAmountOfTicks());
             }
+            soujourn_ticks = soujourn_ticks + t - t_departure + t_transmission;
             // Don't come back to this unless arrival changes the tick value
             t_departure = Integer.MAX_VALUE;
         }
@@ -232,7 +232,7 @@ public class simulator {
         }
 
         E_N = new double [p_num_steps][M];
-        E_T = new int [p_num_steps][M];
+        E_T = new double [p_num_steps][M];
         P_IDLE = new double [p_num_steps][M];
     }
 
@@ -246,9 +246,7 @@ public class simulator {
         }
         running_e_n = running_e_n / M;
         System.out.println(running_e_n);
-        System.out.println();
 */
-
         System.out.print("E_T["+p_index+"]: ");
         double running_e_t = 0;
         for (int i = 0; i < M; i++) {
@@ -294,16 +292,7 @@ public class simulator {
     }
 
     public static void calculate_E_T(int M_index, int p_index) {
-        double average_sojourn_time = 0;
-
-        for(int i = 0; i < sojourn_list.size(); i++) {
-            average_sojourn_time = average_sojourn_time + sojourn_list.get(i)*ticks_in_one_second;
-        }
-
-        E_T[p_index][M_index] = (int)(average_sojourn_time/sojourn_list.size());
-
-        // Reset variables that will be used in future intermediate calculations
-        sojourn_list.clear();
+        E_T[p_index][M_index] = (double)soujourn_ticks/(double)total_packets;
     }
 
     public static void calculate_P_IDLE(int M_index, int p_index) {
