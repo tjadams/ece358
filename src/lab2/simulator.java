@@ -1,7 +1,9 @@
 package lab2;
 
+import java.util.concurrent.ThreadLocalRandom;
+
 public class simulator {
-    static Node node;
+    static lab2.node node;
     static boolean medium_busy;
 
     public static void main (String args[]) {
@@ -35,13 +37,35 @@ public class simulator {
     }
 
     public static void initialize_variables() {
-        node = new Node();
+        node = new node();
     }
 
-    public static void transmit(Node node) {
+    public static void transmit(lab2.node node) {
         // TODO: Detect collision
         node.remove();
         // Does this packet go to another node or somewhere?
 
+    }
+
+    public static void binary_exp_backoff(lab2.node node) {
+        int max_retransmit_count = 10;
+        int random_num = 0;
+        int Tp = 512;
+        int Tb = 0;
+
+        node.increment_retransmit_count();
+        if (node.i > max_retransmit_count) {
+            // Drop packet
+        } else {
+            // Generate random number between 0 and 2^i - 1
+            // http://stackoverflow.com/a/363692
+            random_num = ThreadLocalRandom.current()
+                    .nextInt(0, (int) Math.pow(2, (double) node.i));
+
+            Tb = Tp * random_num;
+
+            // Wait(Tb)
+
+        }
     }
 }
