@@ -2,6 +2,8 @@ package lab2;
 
 public class simulator {
     static Node node;
+    static boolean medium_busy;
+
     public static void main (String args[]) {
         // Do something each tick for each queue
         initialize_variables();
@@ -13,7 +15,11 @@ public class simulator {
             if (node.state == 0) {
                 node.i = 0;
                 senseMedium();
-
+                if (medium_busy) {
+                    wait();
+                } else {
+                    transmit();
+                }
             }
 
 
@@ -30,5 +36,12 @@ public class simulator {
 
     public static void initialize_variables() {
         node = new Node();
+    }
+
+    public static void transmit(Node node) {
+        // TODO: Detect collision
+        node.remove();
+        // Does this packet go to another node or somewhere?
+
     }
 }
