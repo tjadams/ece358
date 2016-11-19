@@ -1,10 +1,16 @@
 package lab2;
 
-public class Node {
+public class node {
     // TODO add a queue
-    static int state;
-    public Node node() {
+    int state;
+    int i = 0;
+
+    public node() {
         // TODO initialize queue
         this.state = 0;
+    }
+
+    public void increment_retransmit_count() {
+        i += 1;
     }
 }
