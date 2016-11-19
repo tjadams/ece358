@@ -4,8 +4,8 @@ public class Node {
     // TODO add a queue
     int state;
     boolean sensingMedium;
-    long state_start_tick;
-    long state_end_tick;
+    int state_start_tick;
+    int state_end_tick;
     int i;
     public Node() {
         // TODO initialize queue
