@@ -9,6 +9,8 @@ package lab2;
 // TODO what should we assume the distance between two neighbours is?
 // TODO is queue size finite or infinite?
 
+import java.util.concurrent.ThreadLocalRandom;
+
 public class Simulator {
     static Node node;
     static double kMax = 10.0;
@@ -45,7 +47,7 @@ public class Simulator {
             } else if (node.state == 3) {
 
             } else if (node.state == 4) {
-
+                binary_exp_backoff(node);
             }
             //          }
         }
@@ -72,6 +74,28 @@ public class Simulator {
                 node.state = 2; // upgrade to next state (state 0 goes to 2 and state 1 goes to 2)
                 resetNodeTiming(node);
             }
+        }
+    }
+
+    public static void binary_exp_backoff(Node node) {
+        int max_retransmit_count = 10;
+        int random_num = 0;
+        int Tp = 512;
+        int Tb = 0;
+
+        node.increment_retransmit_count();
+        if (node.i > max_retransmit_count) {
+            // Drop packet
+        } else {
+            // Generate random number between 0 and 2^i - 1
+            // http://stackoverflow.com/a/363692
+            random_num = ThreadLocalRandom.current()
+                    .nextInt(0, (int) Math.pow(2, (double) node.i));
+
+            Tb = Tp * random_num;
+
+            // Wait(Tb)
+
         }
     }
 
