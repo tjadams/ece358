@@ -38,10 +38,10 @@ public class Simulator {
             // TODO transform the function into working on multiple nodes(2 nodes and then n nodes) once it works for one node
 //            for (int i = 0; i < num_of_nodes; i++) {
             if (node.state == 0) {
-//                node.i = 0;
+                node.i = 0;
                 senseMedium(node, t);
             } else if (node.state == 1) {
-
+                senseMedium(node, t);
             } else if (node.state == 2) {
 
             } else if (node.state == 3) {
@@ -101,7 +101,7 @@ public class Simulator {
                 if (t > node.state_end_tick) {
                     node.is_waiting_retransmit = false;
                     // Go back to state 0 and sense the medium.
-                    node.state = 0;
+                    node.state = 1;
                     resetNodeTiming(node);
                 }
             }
