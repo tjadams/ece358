@@ -28,6 +28,8 @@ public class Simulator {
     static double M = 0; // total number of packets successfully received
     static double medium_sense_bit_time = 96.0;
     static double seconds_per_bit_time = 1.0/W; // Note that bit time means time to transfer one bit = 1 bit / bps = 1/W
+    static boolean is_medium_busy = false;
+    static int csma_cd_type = 0;    // 0: 1-persistent, 1: non-persistent, 2: p-persistent
 
     public static void main (String args[]) {
         initialize_variables();
@@ -43,7 +45,17 @@ public class Simulator {
             } else if (node.state == 1) {
                 senseMedium(node, t);
             } else if (node.state == 2) {
-
+                switch(csma_cd_type) {
+                    case 0: // 1-persistent
+                        one_persistent(node, t);
+                        break;
+                    case 1: // Non-persistent
+                        non_persistent(node, t);
+                        break;
+                    case 2: // P-persistent
+                        p_persistent(node, t);
+                        break;
+                }
             } else if (node.state == 3) {
 
             } else if (node.state == 4) {
@@ -75,6 +87,37 @@ public class Simulator {
                 resetNodeTiming(node);
             }
         }
+    }
+
+    public static void one_persistent(Node node, int t) {
+        if (!is_medium_busy) {
+            transmit(node, t);
+        } else {
+            node.state = 1;
+        }
+    }
+
+    public static void non_persistent(Node node, int t) {
+        if (!is_medium_busy) {
+            transmit(node, t);
+        } else {
+            node.state = 4;
+        }
+    }
+
+    public static void p_persistent(Node node, int t) {
+        if (!is_medium_busy) {
+            // TODO: Incorporate probability
+        } else {
+            node.state = 1;
+        }
+    }
+
+    public static void transmit(Node node, int t) {
+        is_medium_busy = true;
+        node.state_start_tick = t;
+//        node.state_end_tick = t + propagation_delay;
+
     }
 
     public static void binary_exp_backoff(Node node, int t) {
