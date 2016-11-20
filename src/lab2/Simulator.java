@@ -38,7 +38,7 @@ public class Simulator {
             // TODO transform the function into working on multiple nodes(2 nodes and then n nodes) once it works for one node
 //            for (int i = 0; i < num_of_nodes; i++) {
             if (node.state == 0) {
-                node.i = 0;
+//                node.i = 0;
                 senseMedium(node, t);
             } else if (node.state == 1) {
 
@@ -47,7 +47,7 @@ public class Simulator {
             } else if (node.state == 3) {
 
             } else if (node.state == 4) {
-                binary_exp_backoff(node);
+                binary_exp_backoff(node, t);
             }
             //          }
         }
@@ -77,25 +77,34 @@ public class Simulator {
         }
     }
 
-    public static void binary_exp_backoff(Node node) {
-        int max_retransmit_count = 10;
-        int random_num = 0;
-        int Tp = 512;
-        int Tb = 0;
+    public static void binary_exp_backoff(Node node, int t) {
+        final int max_retransmit_count = 10;
+        // Tp = 512 / W. Equivalent to 512 bit time.
+        final double Tp = 512;
+        int random_num;
+        double Tb;
 
-        node.increment_retransmit_count();
+        node.i = node.i + 1;
         if (node.i > max_retransmit_count) {
             // Drop packet
         } else {
-            // Generate random number between 0 and 2^i - 1
-            // http://stackoverflow.com/a/363692
-            random_num = ThreadLocalRandom.current()
-                    .nextInt(0, (int) Math.pow(2, (double) node.i));
-
-            Tb = Tp * random_num;
-
-            // Wait(Tb)
-
+            if (!node.is_waiting_retransmit) {
+                node.is_waiting_retransmit = true;
+                // Generate random number between 0 and 2^i - 1
+                // http://stackoverflow.com/a/363692
+                random_num = ThreadLocalRandom.current()
+                        .nextInt(0, (int) Math.pow(2, (double) node.i));
+                Tb = Tp * random_num;
+                node.state_start_tick = t;
+                node.state_end_tick = t + (int) bitTimeToTicks(Tb);
+            } else {
+                if (t > node.state_end_tick) {
+                    node.is_waiting_retransmit = false;
+                    // Go back to state 0 and sense the medium.
+                    node.state = 0;
+                    resetNodeTiming(node);
+                }
+            }
         }
     }
 
