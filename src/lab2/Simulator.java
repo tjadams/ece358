@@ -84,11 +84,11 @@ public class Simulator {
         int random_num;
         double Tb;
 
-        node.i = node.i + 1;
         if (node.i > max_retransmit_count) {
             // Drop packet
         } else {
             if (!node.is_waiting_retransmit) {
+                node.i = node.i + 1;
                 node.is_waiting_retransmit = true;
                 // Generate random number between 0 and 2^i - 1
                 // http://stackoverflow.com/a/363692
