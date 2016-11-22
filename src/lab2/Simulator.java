@@ -7,8 +7,6 @@ package lab2;
 // Queue size is infinite
 // Distance between two neighbours is 1 metre
 
-import lab1.KendallPacket;
-
 import java.util.concurrent.ThreadLocalRandom;
 
 public class Simulator {

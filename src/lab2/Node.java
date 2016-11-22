@@ -1,7 +1,5 @@
 package lab2;
 
-import lab1.MD1Queue;
-
 public class Node {
     // TODO add a queue
     int uniqueId;
