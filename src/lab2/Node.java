@@ -1,5 +1,7 @@
 package lab2;
 
+import lab1.MD1Queue;
+
 public class Node {
     // TODO add a queue
     int uniqueId;
@@ -10,6 +12,9 @@ public class Node {
     int state_end_tick;
     int i;
     boolean isTransmitting = false;
+    boolean is_random_waiting = false;
+    int t_doneTransmitting;
+    MD1Queue queue;
 
     public Node(int uniqueId) {
         // TODO initialize queue
@@ -19,5 +24,6 @@ public class Node {
         this.state_end_tick = -1;
         this.i = 0;
         this.uniqueId = uniqueId;
+        this.queue = new MD1Queue();
     }
 }

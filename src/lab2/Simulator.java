@@ -12,15 +12,17 @@ import lab1.KendallPacket;
 import java.util.concurrent.ThreadLocalRandom;
 
 public class Simulator {
+    static Node[] nodes;
+    static double probability_p = 0.1;
     static double distance = 1.0;
     static double total_packets = 0.0;
     static double dropped_packets = 0.0;
-    static double kMax = 10.0;
     static double num_of_ticks = 2500000.0; // this number is from lab1
     static double seconds_per_nanosecond = 1.0/1000000000.0;
     static double seconds_per_tick = 10.0*seconds_per_nanosecond; // 1 tick in seconds = seconds per tick = tick duration
     static double ticks_in_one_second = 1.0/seconds_per_tick;
     static double megabits_per_second = 1000000.0;
+    static int N = 20;
     static double W = 10.0*megabits_per_second; // bits per second TODO could be a multiplier of 10 or 100 for 10 or 100 Mbps
     static double A = 10.0; // packet arrival rate in packets/sec TODO A could be 10 or 20 or 50
     static double L = 1500.0; // packet length is 1500 bytes
@@ -32,6 +34,7 @@ public class Simulator {
     static double M = 0; // total number of packets successfully received
     static double medium_sense_bit_time = 96.0;
     static double seconds_per_bit_time = 1.0/W; // Note that bit time means time to transfer one bit = 1 bit / bps = 1/W
+    static long cumulativeDelay = 0;
     static int csma_cd_type = 1;    // 1: non-persistent, 2: p-persistent
     // Arrival time of a packet (ticks)
     static int t_arrival;
@@ -39,6 +42,7 @@ public class Simulator {
     static int t_departure;
 
     static int t_propogation; // propogation time in ticks between adjacent two nodes
+    static int t_transmission = (int)(packet_service_time*ticks_in_one_second);
 
     public static void main (String args[]) {
         initialize_variables();
@@ -52,34 +56,53 @@ public class Simulator {
             departure(randomNode, t);
 
             // Determine state of each node, do something at that state, upgrade node to next state
-            // TODO transform the function into working on multiple nodes(2 nodes and then n nodes) once it works for one node
-//            for (int i = 0; i < num_of_nodes; i++) {
-            if (randomNode.state == 0) {
-                randomNode.i = 0;
-                senseMedium(randomNode, t);
-            } else if (randomNode.state == 1) {
-                senseMedium(randomNode, t);
-            } else if (randomNode.state == 2) {
-                switch(csma_cd_type) {
-                    case 1: // Non-persistent
-                        non_persistent(randomNode, t);
-                        break;
-                    case 2: // P-persistent
-                        p_persistent(randomNode, t);
-                        break;
+            for (int i = 0; i < N; i++) {
+                if (randomNode.state == 0) {
+                    randomNode.i = 0;
+                    senseMedium(randomNode, t);
+                } else if (randomNode.state == 1) {
+                    senseMedium(randomNode, t);
                 }
-            } else if (randomNode.state == 3) {
-
-            } else if (randomNode.state == 4) {
-                binary_exp_backoff(randomNode, t);
+                // Note that state 2 and state 3 from the diagram are merged
+                else if (randomNode.state == 2) {
+                    switch(csma_cd_type) {
+                        case 1: // Non-persistent
+                            non_persistent(randomNode, t);
+                            break;
+                        case 2: // P-persistent
+                            p_persistent(randomNode, t);
+                            break;
+                    }
+                } else if (randomNode.state == 4) {
+                    binary_exp_backoff(randomNode, t);
+                }
             }
-            //          }
         }
         create_report();
     }
 
+    public static Node findARandomNode() {
+        int random = ThreadLocalRandom.current().nextInt(0, nodes.length);
+        return nodes[random];
+    }
+
+    public static Node findARandomNodeThatIsnt(Node node) {
+        int random = ThreadLocalRandom.current().nextInt(0, nodes.length);
+        if (nodes[random].uniqueId == node.uniqueId) {
+            if (random > 0 && random < N) {
+                return nodes[random - 1];
+            } else if (random == 0) {
+                return nodes[random + 1];
+            }
+        }
+        return nodes[random];
+    }
+
     private static void initialize_variables() {
-        // TODO init queues
+        nodes = new Node[N];
+        for (int i = 0; i < N; i++) {
+            nodes[i] = new Node(i);
+        }
 
         // Get first packet arrival time and departure time
         t_arrival = calc_arrival_time();
@@ -120,29 +143,42 @@ public class Simulator {
             // but a transmission can collide with ongoing transmissions
             Node toNode = findARandomNodeThatIsnt(fromNode);
             transmit(fromNode, toNode, t);
-            receiveTransmit(toNode, t);
+            receiveTransmit(fromNode, toNode, t);
 
             // "while detecting collision"
             if (isCollision(fromNode)) {
-                // TODO send jamming signal and abort
-                // TODO upgrade to state 4
+                fromNode.state = 4;
             } else {
                 // upgrade to state 1
                 fromNode.state = 1;
             }
         } else {
-            // TODO random wait
-            randomWait before sensing medium again
+            // Random wait
+            if (!fromNode.is_random_waiting) {
+                fromNode.is_random_waiting = true;
+                double random_num = ThreadLocalRandom.current()
+                        .nextInt(0, (int) Math.pow(2, (double) 4.0));
+                fromNode.state_start_tick = t;
+                fromNode.state_end_tick = t + (int) bitTimeToTicks(Tp * random_num);
+            } else {
+                if (t > fromNode.state_end_tick) {
+                    fromNode.is_random_waiting = false;
+                    fromNode.state = 1;
+                    resetNodeTiming(fromNode);
+                }
+            }
         }
     }
 
     public static boolean isCollision(Node A) {
-        // TODO loop through every node (node B as in slide 15 from the implementation)
-        if (A.isTransmitting && B.isTransmitting && withinTimeFrame(A, B)){
-            return true;
+        for (int i = 0; i < nodes.length; i++) {
+            Node B = nodes[i];
+            if (A.uniqueId != B.uniqueId && A.isTransmitting &&
+                    B.isTransmitting && withinTimeFrame(A, B)){
+                return true;
+            }
         }
 
-        // outside of for loop
         return false;
     }
 
@@ -150,50 +186,93 @@ public class Simulator {
         if (B.state_start_tick > A.state_start_tick &&
                 B.state_end_tick < A.state_end_tick) {
                 return true;
-            }
         }
+        return false;
     }
-
-    // TODO implement p persistent
+    
     public static void p_persistent(Node fromNode, int t) {
+        if (!is_medium_busy(fromNode)) {
+            double probability_result = Math.random();
+
+            if (probability_result > probability_p) {
+                // Random wait
+                if (!fromNode.is_random_waiting) {
+                    fromNode.is_random_waiting = true;
+                    double random_num = ThreadLocalRandom.current()
+                            .nextInt(0, (int) Math.pow(2, (double) 4.0));
+                    fromNode.state_start_tick = t;
+                    fromNode.state_end_tick = t + (int) bitTimeToTicks(Tp * random_num);
+                } else {
+                    if (t > fromNode.state_end_tick) {
+                        fromNode.is_random_waiting = false;
+                        fromNode.state = 1;
+                        resetNodeTiming(fromNode);
+                    }
+                }
+
+                if (is_medium_busy(fromNode)) {
+                    binary_exp_backoff(fromNode, t);
+                } else {
+                    // Try sensing medium again
+                    fromNode.state = 1;
+                }
+            } else {
+                // Successful probability outcome
+
+                // One attempt to transmit per tick (this is called once per tick)
+                // but a transmission can collide with ongoing transmissions
+                Node toNode = findARandomNodeThatIsnt(fromNode);
+                transmit(fromNode, toNode, t);
+                receiveTransmit(fromNode, toNode, t);
+
+                // "while detecting collision"
+                if (isCollision(fromNode)) {
+                    fromNode.state = 4;
+                } else {
+                    // upgrade to state 1
+                    fromNode.state = 1;
+                }
+            }
+        } else {
+            fromNode.state = 1;
+        }
     }
 
     // If any node other than "transmitting" is transmitting
     // then the medium is busy
-    public static boolean is_medium_busy(Node transmitting){
-        // TODO do a linear search on every node and stop when you find one that's busy
-        if (node.isTransmitting && (node.uniqueId != transmitting.uniqueId)) {
-            return true;
+    public static boolean is_medium_busy(Node transmitting) {
+        for (int i = 0; i < nodes.length; i++) {
+            Node node = nodes[i];
+            if (node.isTransmitting && (node.uniqueId != transmitting.uniqueId)) {
+                return true;
+            }
         }
-
-        // Outside of for loop
         return false;
     }
 
     public static void transmit(Node fromNode, Node toNode, int t) {
         if (t >= t_departure && !fromNode.isTransmitting) {
             fromNode.isTransmitting = true;
-            fromNode.queue.pop();
-            // TODO determine from the queues by using absolute value
-            double numHopsAway = 1.0;
-            t_doneTransmitting = t + t_propogation*numHopsAway;
+            fromNode.state_start_tick = t;
+            fromNode.queue.remove();
+            double numHopsAway = Math.abs(toNode.uniqueId - fromNode.uniqueId);
+            fromNode.t_doneTransmitting = (int)(t + t_propogation*numHopsAway);
+            cumulativeDelay += t_propogation*numHopsAway;
         }
     }
 
     public static void receiveTransmit(Node fromNode, Node toNode, int t) {
-        if (t >= t_doneTransmitting && fromNode.isTransmitting) {
-            // TODO have to transmit frame while detecting collision
+        if (t >= fromNode.t_doneTransmitting && fromNode.isTransmitting) {
             fromNode.isTransmitting = false;
+            fromNode.state_end_tick = t;
             // Add a packet to toNode queue. We don't have to add the same
             // packet we popped because all packets are basically the same
-            toNode.queue.add(new KendallPacket(L));
-            // TODO upgrade transmitter to next state
-            fromNode.state = ...?;
+            toNode.queue.add(new KendallPacket((int)L));
+            // Note that upgrading to the state is done in the collision detection
         }
     }
 
     // Arrival of packet from upper layer
-    // Receive from one node and send to all others
     public static void arrival(Node node, int t) {
         if (t >= t_arrival) {
             total_packets++;
@@ -201,18 +280,16 @@ public class Simulator {
 
             KendallPacket new_packet = new KendallPacket((int)L);
 
-            // Transmit to ONE random node other than this one
-            md1Queue.add(new_packet);
-            queue_size = md1Queue.getSize();
+            node.queue.add(new_packet);
 
             t_arrival = t + calc_arrival_time();
         }
     }
 
-    public static void departure(int t) {
+    public static void departure(Node node, int t) {
         if (t >= t_departure) {
-            if (md1Queue.getSize() != 0) {
-                md1Queue.remove();
+            if (node.queue.getSize() != 0) {
+                node.queue.remove();
             }
         }
     }
@@ -254,10 +331,10 @@ public class Simulator {
         long simulation_time = (long)(num_of_ticks*seconds_per_tick); // (ticks*seocnds/tick in seconds)
         M = total_packets - dropped_packets;
         double throughput = M*L*bits_per_byte/simulation_time; // bits/seconds
+        System.out.println("Throughput: " + throughput);
 
-        // TODO delay
-
-        // TODO question 2.
+        double delay = cumulativeDelay/M;
+        System.out.println("Delay: " + delay);
     }
 
     public static double bitTimeToTicks (double bit_time) {
