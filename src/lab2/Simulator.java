@@ -17,7 +17,7 @@ public class Simulator {
     static double distance = 1.0;
     static double total_packets = 0.0;
     static double dropped_packets = 0.0;
-    static double num_of_ticks = 2500000.0; // this number is from lab1
+    static double num_of_ticks = 50000000.0;
     static double seconds_per_nanosecond = 1.0/1000000000.0;
     static double seconds_per_tick = 10.0*seconds_per_nanosecond; // 1 tick in seconds = seconds per tick = tick duration
     static double ticks_in_one_second = 1.0/seconds_per_tick;
@@ -63,7 +63,7 @@ public class Simulator {
                 } else if (randomNode.state == 1) {
                     senseMedium(randomNode, t);
                 }
-                // Note that state 2 and state 3 from the diagram are merged
+                // Note that state 2 and state 3 from the diagram are merged into state 2
                 else if (randomNode.state == 2) {
                     switch(csma_cd_type) {
                         case 1: // Non-persistent
